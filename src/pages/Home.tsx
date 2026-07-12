@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   Sparkles,
-  Dumbbell,
+  Building2,
   Phone,
   ListChecks,
   CalendarClock,
@@ -12,16 +12,11 @@ import {
   ArrowRight,
   Copy,
 } from "lucide-react";
-import { supabase, slugify } from "../lib/supabase";
+import { slugify } from "../lib/slugify";
+import { TYPE_OPTIONS } from "../lib/businessTypes";
+import ThemeToggle from "../components/ThemeToggle";
 
 type Step = "form" | "loading" | "done" | "error";
-
-const TYPE_LABELS: Record<string, string> = {
-  barbearia: "Barbearia",
-  academia: "Academia",
-  estudio: "Estúdio",
-  outro: "Outro",
-};
 
 type SlotDraft = {
   id: string;
@@ -39,7 +34,7 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
 
   const [name, setName] = useState("");
-  const [type, setType] = useState("academia");
+  const [type, setType] = useState("barbearia");
   const [whatsapp, setWhatsapp] = useState("");
   const [servicesText, setServicesText] = useState("");
 
@@ -81,6 +76,10 @@ export default function Home() {
     const isoSlots = slots.map((s) => new Date(`${s.date}T${s.time}:00`).toISOString());
 
     try {
+      // Import carregado só na hora de enviar — assim a página inicial
+      // não baixa o cliente do Supabase antes de precisar dele.
+      const { supabase } = await import("../lib/supabase");
+
       const baseSlug = slugify(name);
       if (!baseSlug) {
         setErrorMsg("Nome inválido pra gerar o link.");
@@ -147,6 +146,8 @@ export default function Home() {
 
   return (
     <main style={styles.main}>
+      <ThemeToggle />
+
       <div className="fade-up" style={{ ...styles.eyebrow, animationDelay: "0ms" }}>
         <Sparkles size={14} strokeWidth={1.75} />
         Agenda Já · plano grátis
@@ -166,21 +167,21 @@ export default function Home() {
         <form onSubmit={handleSubmit} className="fade-up" style={{ ...styles.form, animationDelay: "180ms" }}>
           <label style={styles.label}>
             <span style={styles.labelText}>
-              <Dumbbell size={14} strokeWidth={1.75} /> Nome do negócio
+              <Building2 size={14} strokeWidth={1.75} /> Nome do negócio
             </span>
             <input
               required
               style={styles.input}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Academia Vida Ativa"
+              placeholder="Barbearia do João"
             />
           </label>
 
           <label style={styles.label}>
             <span style={styles.labelText}>Tipo</span>
             <select style={styles.input} value={type} onChange={(e) => setType(e.target.value)}>
-              {Object.entries(TYPE_LABELS).map(([value, label]) => (
+              {TYPE_OPTIONS.map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
@@ -198,6 +199,7 @@ export default function Home() {
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
               placeholder="11987654321"
+              inputMode="numeric"
             />
           </label>
 
@@ -209,7 +211,7 @@ export default function Home() {
               style={styles.input}
               value={servicesText}
               onChange={(e) => setServicesText(e.target.value)}
-              placeholder="Musculação, Aula de spinning, Avaliação física"
+              placeholder="Corte, Barba, Sobrancelha"
             />
           </label>
 
@@ -221,35 +223,45 @@ export default function Home() {
             <div style={styles.slotPicker}>
               <input
                 type="date"
-                style={{ ...styles.input, flex: "1 1 140px" }}
+                style={styles.dateInput}
                 value={draftDate}
                 onChange={(e) => setDraftDate(e.target.value)}
               />
-              <select
-                style={{ ...styles.input, flex: "0 0 76px" }}
-                value={draftHour}
-                onChange={(e) => setDraftHour(e.target.value)}
-              >
-                {HOURS.map((h) => (
-                  <option key={h} value={h}>
-                    {h}h
-                  </option>
-                ))}
-              </select>
-              <select
-                style={{ ...styles.input, flex: "0 0 76px" }}
-                value={draftMinute}
-                onChange={(e) => setDraftMinute(e.target.value)}
-              >
-                {MINUTES.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-              <button type="button" onClick={addSlot} className="af-add" style={styles.addButton}>
-                <Plus size={16} strokeWidth={2} />
-              </button>
+              <div style={styles.timeRow}>
+                <select
+                  style={styles.timeSelect}
+                  value={draftHour}
+                  onChange={(e) => setDraftHour(e.target.value)}
+                  aria-label="Hora"
+                >
+                  {HOURS.map((h) => (
+                    <option key={h} value={h}>
+                      {h}h
+                    </option>
+                  ))}
+                </select>
+                <select
+                  style={styles.timeSelect}
+                  value={draftMinute}
+                  onChange={(e) => setDraftMinute(e.target.value)}
+                  aria-label="Minuto"
+                >
+                  {MINUTES.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={addSlot}
+                  className="af-add"
+                  style={styles.addButton}
+                  aria-label="Adicionar horário"
+                >
+                  <Plus size={18} strokeWidth={2.25} />
+                </button>
+              </div>
             </div>
 
             {slots.length > 0 && (
@@ -317,8 +329,21 @@ export default function Home() {
   );
 }
 
+const inputBase: React.CSSProperties = {
+  fontSize: 16,
+  padding: "14px 14px",
+  minHeight: 50,
+  borderRadius: "var(--radius)",
+  border: "1px solid var(--border)",
+  background: "var(--surface)",
+  color: "var(--text)",
+  fontWeight: 400,
+  outline: "none",
+  width: "100%",
+};
+
 const styles: Record<string, React.CSSProperties> = {
-  main: { maxWidth: 560, margin: "0 auto", padding: "72px 24px 96px" },
+  main: { maxWidth: 560, margin: "0 auto", padding: "clamp(56px, 11vw, 72px) 20px clamp(64px, 12vw, 96px)" },
   eyebrow: {
     display: "inline-flex",
     alignItems: "center",
@@ -337,9 +362,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   h1: {
     fontFamily: "var(--font-display)",
-    fontSize: 44,
+    fontSize: "clamp(30px, 8vw, 44px)",
     fontWeight: 700,
-    lineHeight: 1.12,
+    lineHeight: 1.14,
     margin: "0 0 18px",
     color: "var(--text)",
     letterSpacing: "-0.01em",
@@ -349,7 +374,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   lede: {
     fontFamily: "var(--font-body)",
-    fontSize: 16,
+    fontSize: "clamp(14.5px, 3.6vw, 16px)",
     lineHeight: 1.6,
     color: "var(--text-dim)",
     marginBottom: 44,
@@ -366,20 +391,15 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     color: "var(--text-dim)",
   },
-  input: {
-    fontSize: 15,
-    padding: "13px 14px",
-    borderRadius: "var(--radius)",
-    border: "1px solid var(--border)",
-    background: "var(--surface)",
-    color: "var(--text)",
-    fontWeight: 400,
-    outline: "none",
-  },
+  input: { ...inputBase },
   slotSection: { display: "flex", flexDirection: "column", gap: 10 },
-  slotPicker: { display: "flex", gap: 8, flexWrap: "wrap" },
+  slotPicker: { display: "flex", flexDirection: "column", gap: 8 },
+  dateInput: { ...inputBase },
+  timeRow: { display: "flex", gap: 8 },
+  timeSelect: { ...inputBase, flex: 1, minWidth: 0, textAlign: "center" },
   addButton: {
-    flex: "0 0 44px",
+    flex: "0 0 50px",
+    minHeight: 50,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -422,7 +442,8 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    padding: "15px 22px",
+    padding: "16px 22px",
+    minHeight: 52,
     borderRadius: "var(--radius)",
     border: "1px solid var(--neon-dim)",
     background: "linear-gradient(180deg, rgba(61,255,160,0.16), rgba(61,255,160,0.06))",

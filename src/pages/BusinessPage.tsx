@@ -1,15 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Loader2, MapPin, CalendarX2 } from "lucide-react";
+import { MapPin, CalendarX2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { TYPE_LABELS } from "../lib/businessTypes";
 import BookingButtons, { Slot } from "../components/BookingButtons";
-
-const TYPE_LABELS: Record<string, string> = {
-  barbearia: "Barbearia",
-  academia: "Academia",
-  estudio: "Estúdio",
-  outro: "Negócio",
-};
+import ThemeToggle from "../components/ThemeToggle";
 
 type Business = {
   id: string;
@@ -42,17 +37,19 @@ export default function BusinessPage() {
       }
       setBusiness(biz);
 
-      const { data: slotRows } = await supabase
-        .from("availability_slots")
-        .select("id, slot_time, services(name)")
-        .eq("business_id", biz.id)
-        .gte("slot_time", new Date().toISOString())
-        .order("slot_time", { ascending: true });
-
-      const { data: activeBookings } = await supabase
-        .from("bookings")
-        .select("slot_id")
-        .in("status", ["pending", "confirmed"]);
+      // As duas consultas abaixo são independentes entre si — rodando em
+      // paralelo (em vez de uma esperar a outra) a página da empresa
+      // economiza uma viagem inteira de rede, o que ajuda bastante em
+      // conexões de celular mais lentas.
+      const [{ data: slotRows }, { data: activeBookings }] = await Promise.all([
+        supabase
+          .from("availability_slots")
+          .select("id, slot_time, services(name)")
+          .eq("business_id", biz.id)
+          .gte("slot_time", new Date().toISOString())
+          .order("slot_time", { ascending: true }),
+        supabase.from("bookings").select("slot_id").in("status", ["pending", "confirmed"]),
+      ]);
 
       const bookedIds = new Set((activeBookings ?? []).map((b) => b.slot_id));
 
@@ -72,9 +69,14 @@ export default function BusinessPage() {
   if (loading) {
     return (
       <main style={styles.main}>
-        <div style={styles.loadingRow}>
-          <Loader2 size={18} className="spin" style={{ color: "var(--neon)" }} />
-          <span style={styles.lede}>Carregando...</span>
+        <ThemeToggle />
+        <div className="af-skeleton" style={styles.skeletonEyebrow} />
+        <div className="af-skeleton" style={styles.skeletonTitle} />
+        <div className="af-skeleton" style={styles.skeletonLede} />
+        <div style={styles.skeletonGrid}>
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="af-skeleton" style={styles.skeletonCard} />
+          ))}
         </div>
       </main>
     );
@@ -83,6 +85,7 @@ export default function BusinessPage() {
   if (notFound || !business) {
     return (
       <main style={styles.main}>
+        <ThemeToggle />
         <div className="fade-up" style={styles.notFoundIcon}>
           <MapPin size={22} strokeWidth={1.75} />
         </div>
@@ -94,6 +97,7 @@ export default function BusinessPage() {
 
   return (
     <main style={styles.main}>
+      <ThemeToggle />
       <div className="fade-up" style={{ ...styles.eyebrow, animationDelay: "0ms" }}>
         {TYPE_LABELS[business.type] ?? "Negócio"}
       </div>
@@ -120,7 +124,7 @@ export default function BusinessPage() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  main: { maxWidth: 560, margin: "0 auto", padding: "72px 24px 96px" },
+  main: { maxWidth: 560, margin: "0 auto", padding: "clamp(56px, 11vw, 72px) 20px clamp(64px, 12vw, 96px)" },
   eyebrow: {
     display: "inline-block",
     fontFamily: "var(--font-body)",
@@ -137,14 +141,14 @@ const styles: Record<string, React.CSSProperties> = {
   },
   h1: {
     fontFamily: "var(--font-display)",
-    fontSize: 36,
+    fontSize: "clamp(26px, 7.5vw, 36px)",
     fontWeight: 700,
-    lineHeight: 1.15,
+    lineHeight: 1.18,
     margin: "0 0 14px",
   },
   lede: {
     fontFamily: "var(--font-body)",
-    fontSize: 16,
+    fontSize: "clamp(14.5px, 3.6vw, 16px)",
     color: "var(--text-dim)",
     marginBottom: 36,
   },
@@ -159,6 +163,14 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "var(--radius)",
     padding: 18,
   },
-  loadingRow: { display: "flex", alignItems: "center", gap: 10 },
   notFoundIcon: { color: "var(--gold)", marginBottom: 10 },
+  skeletonEyebrow: { width: 120, height: 24, borderRadius: 999, marginBottom: 16 },
+  skeletonTitle: { width: "70%", height: 34, borderRadius: 8, marginBottom: 14 },
+  skeletonLede: { width: "90%", height: 18, borderRadius: 6, marginBottom: 36 },
+  skeletonGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+    gap: 12,
+  },
+  skeletonCard: { height: 66 },
 };
