@@ -1,4 +1,4 @@
-# AgendaFlow — base Tier 1 (grátis) — versão Vite
+# Agenda Já — base Tier 1 (grátis) — versão Vite
 
 Mesma ideia da versão Next.js, mas em Vite: SPA puro em React, sem rotas de
 API. O form e a página pública escrevem **direto no Supabase** pelo
@@ -45,7 +45,7 @@ Abre `http://localhost:5173`.
 ```bash
 git init
 git add .
-git commit -m "AgendaFlow base (Vite)"
+git commit -m "Agenda Já base (Vite)"
 git remote add origin SEU_REPO_GIT
 git push -u origin main
 ```

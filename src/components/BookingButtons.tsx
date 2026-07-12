@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Clock, MessageCircle, Check } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 export type Slot = {
@@ -22,16 +23,12 @@ export default function BookingButtons({
   async function handleClick(slot: Slot) {
     setPendingId(slot.id);
 
-    // Libera reservas "pending" expiradas antes de tentar reservar
     await supabase
       .from("bookings")
       .update({ status: "expired" })
       .lt("expires_at", new Date().toISOString())
       .eq("status", "pending");
 
-    // A trava real contra double-booking é a constraint UNIQUE em
-    // slot_id (schema.sql) — se já existir reserva ativa, o insert
-    // abaixo falha com código 23505 (unique_violation).
     const { error } = await supabase.from("bookings").insert({
       slot_id: slot.id,
       status: "pending",
@@ -78,11 +75,24 @@ export default function BookingButtons({
             key={slot.id}
             disabled={isTaken || pendingId === slot.id}
             onClick={() => handleClick(slot)}
+            className="af-slot"
             style={{ ...styles.slot, ...(isTaken ? styles.slotTaken : {}) }}
           >
-            <span style={styles.slotService}>{slot.service}</span>
-            <span style={styles.slotTime}>
-              {isTaken ? "Acabou de ser reservado" : label}
+            <span style={styles.slotTop}>
+              <Clock size={14} strokeWidth={1.75} style={{ color: "var(--gold)" }} />
+              <span style={styles.slotService}>{slot.service}</span>
+            </span>
+            <span style={styles.slotBottom}>
+              {isTaken ? (
+                <>
+                  <Check size={13} strokeWidth={2} /> Acabou de ser reservado
+                </>
+              ) : (
+                <>
+                  {label}
+                  <MessageCircle size={14} strokeWidth={1.75} style={styles.waIcon} />
+                </>
+              )}
             </span>
           </button>
         );
@@ -101,16 +111,26 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-start",
-    gap: 4,
+    gap: 8,
     padding: "14px 16px",
     borderRadius: "var(--radius)",
-    border: "1px solid var(--line)",
-    background: "#fff",
+    border: "1px solid var(--border)",
+    background: "var(--surface)",
     cursor: "pointer",
     textAlign: "left",
-    fontFamily: "Inter, sans-serif",
+    fontFamily: "var(--font-body)",
+    transition: "border-color 0.15s ease, transform 0.15s ease",
   },
-  slotTaken: { opacity: 0.45, cursor: "not-allowed" },
-  slotService: { fontSize: 13, fontWeight: 600, color: "var(--brand-dark)" },
-  slotTime: { fontSize: 15, color: "var(--ink)" },
+  slotTaken: { opacity: 0.4, cursor: "not-allowed" },
+  slotTop: { display: "inline-flex", alignItems: "center", gap: 6 },
+  slotService: { fontSize: 12.5, fontWeight: 600, color: "var(--gold)" },
+  slotBottom: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    fontSize: 15,
+    color: "var(--text)",
+    fontWeight: 500,
+  },
+  waIcon: { color: "var(--neon)", marginLeft: "auto" },
 };
