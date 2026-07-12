@@ -1,0 +1,31 @@
+:root {
+  --ink: #16221e;
+  --paper: #f7f5ef;
+  --line: #d8d2c2;
+  --brand: #1f6f5c;
+  --brand-dark: #144a3d;
+  --accent: #e8b23d;
+  --danger: #b3452e;
+  --radius: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  padding: 0;
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  min-height: 100%;
+}
+
+button, input, select, textarea {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+a {
+  color: inherit;
+}
